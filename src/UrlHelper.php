@@ -42,6 +42,7 @@ class UrlHelper
      *
      * @param string $routeName
      * @param array $params
+     * @param array $extra
      * @return string
      * @throws Exception\RuntimeException if no route provided, and no result match
      *     present.
@@ -49,7 +50,7 @@ class UrlHelper
      *     routing failure.
      * @throws RouterException if router cannot generate URI for given route.
      */
-    public function __invoke($routeName = null, array $params = [])
+    public function __invoke($routeName = null, array $params = [], array $extra = [])
     {
         $result = $this->getRouteResult();
         if ($routeName === null && $result === null) {
@@ -64,14 +65,18 @@ class UrlHelper
         }
 
         if ($routeName === null) {
-            return $basePath . $this->generateUriFromResult($params, $result);
+            $uri = $basePath . $this->generateUriFromResult($params, $result);
+
+            return $this->appendQueryAndFragment($uri, $extra);
         }
 
         if ($result) {
             $params = $this->mergeParams($routeName, $result, $params);
         }
 
-        return $basePath . $this->router->generateUri($routeName, $params);
+        $uri = $basePath . $this->router->generateUri($routeName, $params);
+
+        return $this->appendQueryAndFragment($uri, $extra);
     }
 
     /**
@@ -188,5 +193,26 @@ class UrlHelper
         }
 
         return array_merge($result->getMatchedParams(), $params);
+    }
+
+    /**
+     * Appends query string arguments and fragment to the generated url.
+     * 
+     * @param  string $url   The URL string assembled by router.
+     * @param  array  $extra Array of query and fragment like additions for the url.
+     * 
+     * @return string
+     */
+    private function appendQueryAndFragment($url, array $extra = [])
+    {
+        if(isset($extra['query']) && is_array($extra['query'])) {
+            $url .= '?'.http_build_query($extra['query']);
+        }
+
+        if(isset($extra['fragment'])) {
+            $url .= '#'.(string) $extra['fragment'];
+        }
+
+        return $url;
     }
 }
